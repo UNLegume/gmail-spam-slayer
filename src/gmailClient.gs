@@ -57,7 +57,7 @@ function gmailApiRequest(endpoint, options = {}) {
  */
 function getUnprocessedMessages() {
   const query = `to:${CONFIG.TARGET_EMAIL} in:inbox -label:${CONFIG.LABEL_PROCESSED}`;
-  const endpoint = `/messages?q=${encodeURIComponent(query)}&maxResults=${CONFIG.MAX_EMAILS_PER_RUN}`;
+  const endpoint = `/messages?q=${encodeURIComponent(query)}&maxResults=500`;
 
   try {
     const data = gmailApiRequest(endpoint);

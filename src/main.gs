@@ -2,7 +2,7 @@
  * メインエントリポイント・処理フロー制御
  *
  * 午前10時と午後7時の1日2回の GAS トリガーから呼び出され、以下のフローを実行:
- * 1. Gmail REST API で未処理メールを取得（最大50通）
+ * 1. Gmail REST API で未処理メールを取得（GAS実行時間制限に基づく時間ベース制御、5分経過で安全終了）
  * 2. 各メールについて:
  *    a. スレッド内に自社ドメイン（finn.co.jp / ex.finn.co.jp）からの返信があるか確認
  *       → あればスパム判定をスキップし、_filtered/processed ラベルのみ付与
@@ -23,8 +23,11 @@
  * メイン処理関数。GAS トリガーから呼び出される。
  * 未処理メールを取得し、自社返信確認 → ブラックリスト確認 → AI判定 → アクション実行の
  * フローを各メールに対して実行する。
+ * GAS の実行時間制限（6分）に対して5分経過で安全に処理を終了する時間ベース制御を行う。
  */
 function processEmails() {
+  const startTime = Date.now();
+
   // 必要なラベルの存在を事前に確認
   ensureLabelExists(CONFIG.LABEL_BLOCKED);
   ensureLabelExists(CONFIG.LABEL_LOW_CONFIDENCE);
@@ -51,6 +54,11 @@ function processEmails() {
   };
 
   for (const message of messages) {
+    // 実行時間チェック（5分経過で安全に終了）
+    if (Date.now() - startTime > CONFIG.MAX_EXECUTION_MS) {
+      console.log('実行時間制限に近づいたため処理を終了します');
+      break;
+    }
     const messageId = message.id;
     try {
       // メール詳細を取得

@@ -16,7 +16,7 @@ const CONFIG = {
   API_RETRY_COOLDOWN_MS: 5000,
 
   // メール処理
-  MAX_EMAILS_PER_RUN: 50,
+  MAX_EXECUTION_MS: 5 * 60 * 1000, // 5分 = 300,000ms（GAS 6分制限に対して1分のバッファ）
   EMAIL_BODY_MAX_LENGTH: 2000,
   TARGET_EMAIL: 'service@finn.co.jp',
 
