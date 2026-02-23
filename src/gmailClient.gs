@@ -127,6 +127,9 @@ function hasCompanyReply(threadId) {
       const match = fromValue.match(/<([^>]+)>/) || fromValue.match(/(\S+@\S+)/);
       const emailAddress = match ? match[1].toLowerCase() : fromValue.toLowerCase();
 
+      // TARGET_EMAIL（メーリングリスト）自体は自社返信とみなさない
+      if (emailAddress === CONFIG.TARGET_EMAIL) continue;
+
       for (const domain of CONFIG.COMPANY_DOMAINS) {
         if (emailAddress.endsWith('@' + domain)) {
           return true;
