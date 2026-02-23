@@ -61,13 +61,14 @@ function buildClassificationPrompt(subject, body) {
 - spam と判定する場合、confidence は 0.75 以上を基本とする
 - uncertain は本当に判断材料が不足している場合のみ使用する
 - 一方的な営業・宣伝メールは、受信者の業種との関連性に関わらず spam とする
+- セミナー・相談会・説明会等のイベント案内は、テーマが人材・採用・IT・SESいずれであっても spam とする
 
 ## 分類カテゴリ
 
 ### spam（営業メール・迷惑メール） ※該当する場合は confidence 0.85 以上を推奨
 以下のような一方的な売り込みメール:
 - IT製品・SaaSツール・マーケティングサービス等の宣伝
-- セミナー・ウェビナー・イベント・展示会の案内（主催・後援・協賛に関わらず）
+- セミナー・ウェビナー・イベント・展示会・相談会・説明会・勉強会・体験会・交流会の案内（テーマ・主催・後援・協賛に関わらず）
 - 資料送付の打診・ホワイトペーパーの案内
 - 面談・商談・アポイントメントの一方的な依頼
 - コンサルティング・広告・Web制作・DX推進等のサービス紹介
@@ -77,18 +78,19 @@ function buildClassificationPrompt(subject, body) {
 - オフィス用品・回線・電力・不動産等の営業
 - 一括送信されたと思われるテンプレート的なメール
 - 受信者のSES・人材事業と無関係な商品やサービスの売り込み全般
+- BPO・営業代行・リスト販売・テレアポ代行等のアウトソーシングサービスの提案
 
 ### legitimate（正規のメール）
 以下のようなSES・人材ビジネスに関連するメール:
 - SES案件の紹介（案件名・スキル要件・単価・期間・勤務地など具体的な案件情報を含む）
 - エンジニアの要員提案・スキルシートの共有
-- 協業・パートナー提携に関する具体的な打診
+- 協業・パートナー提携に関する具体的な打診（案件単価・エンジニアスキルなど具体的な条件を伴うもの）
 - 案件や要員に関する返信・やり取りの続き
-- 人材紹介に関する具体的なマッチング提案
+- 人材紹介に関する具体的なマッチング提案（特定の求職者や求人に関する具体的な情報を含むもの）
 
 また、以下も legitimate:
 - 取引先・既存の関係者からの業務連絡
-- 問い合わせへの回答・返信
+- 受信者（finn.co.jp / ex.finn.co.jp）が過去に行った問い合わせや依頼への返答・回答
 - 利用中のサービスに関する通知（請求・アカウント・障害情報等）
 - 社内連絡・チーム内のやり取り
 
@@ -151,8 +153,7 @@ function classifyEmail(subject, body) {
           },
           required: ['classification', 'confidence', 'reason'],
         },
-        // thinking モデルで responseMimeType が無視される問題を回避
-        thinkingConfig: { thinkingBudget: 0 },
+        thinkingConfig: { thinkingBudget: 1024 },
       },
     };
 
@@ -198,7 +199,8 @@ function classifyEmail(subject, body) {
     }
 
     const responseData = JSON.parse(response.getContentText());
-    const content = responseData.candidates[0].content.parts[0].text;
+    const parts = responseData.candidates[0].content.parts;
+    const content = parts[parts.length - 1].text;
     const result = JSON.parse(content);
 
     // レスポンスの妥当性を検証

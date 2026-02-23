@@ -33,18 +33,17 @@ appsscript.json        # GAS マニフェスト
    - 存在しない → AI 判定へ
 5. Gemini API でメール内容を判定
 6. 判定結果に基づくアクション:
-   - spam (confidence ≥ 0.8) → アーカイブ + `_filtered/blocked` ラベル + ブラックリスト自動追加
-   - spam (confidence < 0.8) → 受信トレイに残す + `_filtered/low_confidence` ラベル
-   - legitimate / uncertain → 受信トレイに残す
+   - spam (confidence ≥ 0.7) → アーカイブ + `_filtered/blocked` ラベル + ブラックリスト自動追加
+   - spam (confidence < 0.7) / legitimate / uncertain → 受信トレイに残す
 7. 処理ログをスプレッドシートに記録
 
 ## 判定ルール
 | 判定 | confidence | アクション |
 |------|-----------|-----------|
-| spam | ≥ 0.8 | アーカイブ + ブラックリスト追加 |
-| spam | < 0.8 | 受信トレイに残す（ラベルのみ） |
+| spam | ≥ 0.7 | アーカイブ + ブラックリスト追加 |
+| spam | < 0.7 | 受信トレイに残す |
 | legitimate | — | 受信トレイに残す |
-| uncertain | — | 受信トレイに残す（安全側） |
+| uncertain | — | 受信トレイに残す |
 
 ## ブラックリスト仕様
 - スプレッドシートのシート `Blacklist` に保存
@@ -56,8 +55,7 @@ appsscript.json        # GAS マニフェスト
 GAS 内蔵の `GmailApp` は1日20,000回の読み取り制限がある。Gmail REST API を `UrlFetchApp` 経由で呼び出すことで日次制限を回避し、秒単位のレートリミット（250 quota units/sec/user）のみとなる。認証は `ScriptApp.getOAuthToken()` で取得。
 
 ## ラベル名
-- `_filtered/blocked` — 高確信度スパムのアーカイブ用
-- `_filtered/low_confidence` — 低確信度スパムの目印用
+- `_filtered/blocked` — スパムのアーカイブ用
 - `_filtered/processed` — 処理済みマーカー（重複処理防止）
 
 ## コーディング規約

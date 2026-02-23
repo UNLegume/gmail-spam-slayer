@@ -34,11 +34,7 @@ GAS トリガー起動（10:00 / 19:00）
                       --> アーカイブ + _filtered/blocked ラベル + ブラックリスト自動追加
                           _filtered/processed ラベル付与
                           処理ログ記録（action: blocked_by_ai）
-                      spam (confidence < 0.7)
-                      --> _filtered/low_confidence ラベル付与（受信トレイに残す）
-                          _filtered/processed ラベル付与
-                          処理ログ記録（action: labeled_low_confidence）
-                      legitimate / uncertain
+                      spam (confidence < 0.7) / legitimate / uncertain
                       --> 受信トレイに残す
                           _filtered/processed ラベル付与
                           処理ログ記録（action: kept_in_inbox）
@@ -51,7 +47,7 @@ GAS トリガー起動（10:00 / 19:00）
 | 自社返信あり | legitimate | — | 受信トレイに残す（スパム判定スキップ） |
 | ブラックリスト登録済み | spam | — | ゴミ箱に移動（AI判定なし） |
 | AI判定 | spam | >= 0.7 | アーカイブ + `_filtered/blocked` + ブラックリスト自動追加 |
-| AI判定 | spam | < 0.7 | `_filtered/low_confidence` ラベルのみ（受信トレイに残す） |
+| AI判定 | spam | < 0.7 | 受信トレイに残す |
 | AI判定 | legitimate | — | 受信トレイに残す |
 | AI判定 | uncertain | — | 受信トレイに残す（安全側に倒す） |
 
@@ -152,7 +148,7 @@ GAS エディタの「プロジェクトの設定」>「スクリプト プロ�
 
 GAS エディタで `initialize()` を手動実行する。以下の処理が一括で行われる。
 
-- 必要な Gmail ラベル（`_filtered/blocked`, `_filtered/low_confidence`, `_filtered/processed`）を作成する
+- 必要な Gmail ラベル（`_filtered/blocked`, `_filtered/processed`）を作成する
 - スプレッドシートに `Blacklist` シートと `ProcessLog` シートを作成する
 - `GEMINI_API_KEY` と `SPREADSHEET_ID` が設定されているか確認し、未設定の場合はエラーログを出力して終了する
 
@@ -184,7 +180,6 @@ GAS エディタで `setupTrigger()` を手動実行する。`processEmails` の
 | `BLACKLIST_SHEET_NAME` | `Blacklist` | ブラックリストシート名 |
 | `LOG_SHEET_NAME` | `ProcessLog` | ログシート名 |
 | `LABEL_BLOCKED` | `_filtered/blocked` | 高確信度スパムに付与するラベル |
-| `LABEL_LOW_CONFIDENCE` | `_filtered/low_confidence` | 低確信度スパムに付与するラベル |
 | `LABEL_PROCESSED` | `_filtered/processed` | 処理済みマーカーラベル |
 | `GMAIL_API_BASE` | `https://www.googleapis.com/gmail/v1/users/me` | Gmail REST API のベース URL |
 | `COMPANY_DOMAINS` | `['finn.co.jp', 'ex.finn.co.jp']` | 自社ドメイン（返信があるスレッドはスパム判定をスキップ） |

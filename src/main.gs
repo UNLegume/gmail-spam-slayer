@@ -30,7 +30,6 @@ function processEmails() {
 
   // 必要なラベルの存在を事前に確認
   ensureLabelExists(CONFIG.LABEL_BLOCKED);
-  ensureLabelExists(CONFIG.LABEL_LOW_CONFIDENCE);
   ensureLabelExists(CONFIG.LABEL_PROCESSED);
 
   // 未処理メールを取得（id と threadId を含むオブジェクトの配列）
@@ -48,7 +47,6 @@ function processEmails() {
     skipped_company_reply: 0,
     blocked_by_blacklist: 0,
     blocked_by_ai: 0,
-    labeled_low_confidence: 0,
     kept_in_inbox: 0,
     errors: 0,
   };
@@ -105,12 +103,8 @@ function processEmails() {
             addLabel(messageId, CONFIG.LABEL_BLOCKED);
             addToBlacklist(senderEmail, 'auto');
             action = 'blocked_by_ai';
-          } else if (classification === 'spam' && confidence < CONFIG.SPAM_CONFIDENCE_THRESHOLD) {
-            // 低確信度スパム → ラベルのみ
-            addLabel(messageId, CONFIG.LABEL_LOW_CONFIDENCE);
-            action = 'labeled_low_confidence';
           } else {
-            // legitimate / uncertain → 受信トレイに残す
+            // legitimate / uncertain / 低確信度spam → 受信トレイに残す
             action = 'kept_in_inbox';
           }
         }
@@ -143,14 +137,13 @@ function processEmails() {
   console.log(`自社返信済みスキップ: ${summary.skipped_company_reply}`);
   console.log(`ブラックリストによりブロック: ${summary.blocked_by_blacklist}`);
   console.log(`AI判定によりブロック: ${summary.blocked_by_ai}`);
-  console.log(`低確信度ラベル付与: ${summary.labeled_low_confidence}`);
   console.log(`受信トレイに残す: ${summary.kept_in_inbox}`);
   console.log(`エラー: ${summary.errors}`);
 }
 
 /**
  * 初期化関数。GAS エディタから手動実行する。
- * - 必要なラベルの作成（_filtered/blocked, _filtered/low_confidence, _filtered/processed）
+ * - 必要なラベルの作成（_filtered/blocked, _filtered/processed）
  * - スプレッドシートのシート作成（Blacklist, ProcessLog）
  * - Script Properties（GEMINI_API_KEY と SPREADSHEET_ID）の設定確認
  * - 「初期化完了」ログの出力
@@ -163,8 +156,6 @@ function initialize() {
   console.log('ラベルの作成を確認中...');
   ensureLabelExists(CONFIG.LABEL_BLOCKED);
   console.log(`  ラベル "${CONFIG.LABEL_BLOCKED}" OK`);
-  ensureLabelExists(CONFIG.LABEL_LOW_CONFIDENCE);
-  console.log(`  ラベル "${CONFIG.LABEL_LOW_CONFIDENCE}" OK`);
   ensureLabelExists(CONFIG.LABEL_PROCESSED);
   console.log(`  ラベル "${CONFIG.LABEL_PROCESSED}" OK`);
 

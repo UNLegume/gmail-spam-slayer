@@ -31,7 +31,6 @@ const CONFIG = {
 
   // Gmail ラベル
   LABEL_BLOCKED: '_filtered/blocked',
-  LABEL_LOW_CONFIDENCE: '_filtered/low_confidence',
   LABEL_PROCESSED: '_filtered/processed',
 
   // Gmail REST API
