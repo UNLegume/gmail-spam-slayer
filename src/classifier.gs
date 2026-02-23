@@ -128,6 +128,7 @@ function classifyEmail(subject, body, from) {
           },
           required: ['is_legitimate', 'confidence', 'reason'],
         },
+        thinkingConfig: { thinkingBudget: 0 },
       },
     };
 
