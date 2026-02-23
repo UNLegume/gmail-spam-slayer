@@ -20,26 +20,23 @@
   |
   +-- Gmail REST API で未処理メールを取得（最大50通）
         |
-        +-- [送信元がブラックリスト登録済み & 猶予期間外]
-        |     --> ゴミ箱に移動（削除）+ last_confirmed_date 更新
+        +-- [送信元がブラックリスト登録済み]
+        |     --> ゴミ箱に移動（AI判定なし）
         |         + _filtered/processed ラベル付与
-        |
-        +-- [送信元がブラックリスト登録済み & 猶予期間内]
-        |     --> Gemini API で AI 判定
-        |         legitimate 判定 --> ブラックリストから自動解除
-        |         それ以外 --> 通常の判定ルールを適用
+        |         + 処理ログ記録
         |
         +-- [送信元がブラックリスト未登録]
               --> Gemini API で AI 判定
                   |
                   +-- spam (confidence >= 0.8)
                   |     --> アーカイブ + _filtered/blocked ラベル + ブラックリスト自動追加
+                  |         + _filtered/processed ラベル付与 + 処理ログ記録
                   +-- spam (confidence < 0.8)
                   |     --> _filtered/low_confidence ラベルのみ付与
+                  |         + _filtered/processed ラベル付与 + 処理ログ記録
                   +-- legitimate / uncertain
                         --> 受信トレイに残す
-
-全メールに _filtered/processed ラベルを付与（重複処理防止）
+                            + _filtered/processed ラベル付与 + 処理ログ記録
 ```
 
 ---
@@ -48,11 +45,11 @@
 
 | 判定 | confidence | アクション |
 |------|------------|-----------|
+| ブラックリスト登録済み | — | ゴミ箱に移動（AI判定なし） |
 | spam | >= 0.8 | アーカイブ + `_filtered/blocked` ラベル + ブラックリスト自動追加 |
 | spam | < 0.8 | `_filtered/low_confidence` ラベルのみ（受信トレイに残す） |
 | legitimate | — | 受信トレイに残す |
 | uncertain | — | 受信トレイに残す（安全側に倒す） |
-| ブラックリスト（猶予期間外） | — | ゴミ箱に移動（削除） |
 
 ---
 
@@ -106,19 +103,14 @@ SES・人材ビジネスに直接関係する具体的なやり取りを legitim
 |--------|------|
 | email | メールアドレス（正規化済み・小文字） |
 | added_date | ブラックリスト追加日時 |
-| last_confirmed_date | 最終確認日時 |
 | source | 追加元（`auto`: AI判定による自動追加 / `manual`: 手動追加） |
 
-**猶予期間（登録後30日間）の動作**
+**ブラックリスト登録済みメールの動作**
 
-- Gemini API による AI 再判定を実施する
-- 猶予期間中に `legitimate` 判定が出た場合、ブラックリストから自動解除する
-- それ以外は通常の判定ルールを適用する
-
-**猶予期間経過後の動作**
-
-- Gemini API を呼び出さずにゴミ箱へ移動する（API コスト削減）
-- `last_confirmed_date` を更新する
+- 登録済みアドレスからのメールは AI 判定を一切行わず即座にゴミ箱に移動する
+- ゴミ箱に移動したメールは Gmail の仕様により30日後に自動的に完全削除される（30日以内であれば手動で復元可能）
+- 登録アドレスが増えるほど AI API 呼び出しをスキップするため、実行時間が短縮される
+- 誤登録した場合はスプレッドシートの `Blacklist` シートから該当行を手動で削除することで解除できる
 
 シートは初回アクセス時に自動作成される。ヘッダー行は青色・太字・中央揃えで書式設定され、1行目が固定される。カラム幅と折り返し設定も自動で適用される。
 
@@ -190,8 +182,8 @@ removeTrigger()  # トリガーを削除（停止したい場合）
 
 `src/config.gs` の主要設定。
 
-| 設定名 | デフォルト値 | 説明 |
-|--------|-------------|------|
+| 設定名 | 値 | 説明 |
+|--------|----|------|
 | `GEMINI_MODEL` | `gemini-2.5-flash` | 使用する Gemini モデル |
 | `GEMINI_TEMPERATURE` | `0` | 応答の確定性（0 = 最大確定） |
 | `GEMINI_MAX_TOKENS` | `1024` | 最大出力トークン数 |
@@ -199,7 +191,6 @@ removeTrigger()  # トリガーを削除（停止したい場合）
 | `EMAIL_BODY_MAX_LENGTH` | `2000` | 判定に使う本文の最大文字数 |
 | `TARGET_EMAIL` | `service@finn.co.jp` | フィルタリング対象のメールアドレス |
 | `SPAM_CONFIDENCE_THRESHOLD` | `0.8` | アーカイブ判定の確信度閾値 |
-| `BLACKLIST_GRACE_PERIOD_DAYS` | `30` | ブラックリスト猶予期間（日数） |
 | `API_CALL_DELAY_MS` | `500` | API 呼び出し間のスリープ（ms） |
 | `API_RETRY_MAX` | `3` | API リトライ上限回数 |
 | `API_RETRY_COOLDOWN_MS` | `5000` | リトライ待機時間（ms） |

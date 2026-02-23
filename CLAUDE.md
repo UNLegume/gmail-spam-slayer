@@ -26,8 +26,7 @@ appsscript.json        # GAS マニフェスト
 1. GAS トリガー起動（1日2回：午前10時・午後7時、1回最大50通）
 2. Gmail REST API で未処理メールを取得
 3. 送信元がブラックリストに存在するか確認
-   - 存在 & 猶予期間外 → 即アーカイブ + `_filtered/blocked` ラベル
-   - 存在 & 猶予期間内 → AI 判定へ（再評価）
+   - 存在する → 即ゴミ箱に移動（AI判定なし）+ `_filtered/processed` ラベル + ログ記録
    - 存在しない → AI 判定へ
 4. Gemini API でメール内容を判定
 5. 判定結果に基づくアクション:
@@ -46,10 +45,9 @@ appsscript.json        # GAS マニフェスト
 
 ## ブラックリスト仕様
 - スプレッドシートのシート `Blacklist` に保存
-- カラム: email, added_date, last_confirmed_date, source (auto/manual)
-- 登録後 30 日間は「猶予期間」として AI 再判定を実施
-- 猶予期間中に legitimate 判定が出たら自動解除
-- 猶予期間経過後は API を呼ばずに即アーカイブ（コスト削減）
+- カラム: email, added_date, source (auto/manual)
+- ブラックリスト登録済みのメールは内容を精査せず即座にゴミ箱に移動する（AI判定なし）
+- 猶予期間は現在無効（`BLACKLIST_GRACE_PERIOD_DAYS` は将来の復活に備えて config に残存）
 
 ## Gmail REST API の利用理由
 GAS 内蔵の `GmailApp` は1日20,000回の読み取り制限がある。Gmail REST API を `UrlFetchApp` 経由で呼び出すことで日次制限を回避し、秒単位のレートリミット（250 quota units/sec/user）のみとなる。認証は `ScriptApp.getOAuthToken()` で取得。

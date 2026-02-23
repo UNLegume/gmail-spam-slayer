@@ -5,8 +5,8 @@
  * 1. Gmail REST API で未処理メールを取得（最大50通）
  * 2. 各メールについて:
  *    a. 送信元がブラックリストにあるか確認
- *    b. ブラックリスト登録済み & 猶予期間外 → 即アーカイブ
- *    c. それ以外 → Gemini API で判定
+ *    b. ブラックリスト登録済み → 即ゴミ箱に移動（AI判定なし）
+ *    c. ブラックリスト未登録 → Gemini API で判定
  *    d. 判定結果に基づくアクション実行
  *    e. 処理ログ記録
  * 3. 処理済みラベルを付与
@@ -43,7 +43,6 @@ function processEmails() {
     blocked_by_blacklist: 0,
     blocked_by_ai: 0,
     labeled_low_confidence: 0,
-    unblocked_from_blacklist: 0,
     kept_in_inbox: 0,
     errors: 0,
   };
@@ -62,17 +61,16 @@ function processEmails() {
       let action;
       let reason;
 
-      if (blacklistStatus.found && !blacklistStatus.isInGracePeriod) {
-        // ブラックリスト登録済み & 猶予期間外 → ゴミ箱に移動
+      if (blacklistStatus.found) {
+        // ブラックリスト登録済み → 即ゴミ箱に移動（AI判定なし）
         trashMessage(messageId);
-        updateLastConfirmed(senderEmail);
 
         classification = 'spam';
         confidence = 1.0;
-        action = 'deleted_blacklisted';
-        reason = 'ブラックリスト登録済み（猶予期間外）';
+        action = 'blocked_by_blacklist';
+        reason = 'ブラックリスト登録済み';
       } else {
-        // ブラックリスト未登録 or 猶予期間内 → AI 判定
+        // ブラックリスト未登録 → AI 判定
         // Gemini 無料枠のレートリミット対策（10 req/min）
         Utilities.sleep(CONFIG.API_CALL_DELAY_MS);
         const result = classifyEmail(detail.subject, detail.body);
@@ -90,10 +88,6 @@ function processEmails() {
           // 低確信度スパム → ラベルのみ
           addLabel(messageId, CONFIG.LABEL_LOW_CONFIDENCE);
           action = 'labeled_low_confidence';
-        } else if (classification === 'legitimate' && blacklistStatus.found && blacklistStatus.isInGracePeriod) {
-          // 猶予期間内に legitimate 判定 → ブラックリストから解除
-          removeFromBlacklist(senderEmail);
-          action = 'unblocked_from_blacklist';
         } else {
           // legitimate / uncertain → 受信トレイに残す
           action = 'kept_in_inbox';
@@ -127,7 +121,6 @@ function processEmails() {
   console.log(`ブラックリストによりブロック: ${summary.blocked_by_blacklist}`);
   console.log(`AI判定によりブロック: ${summary.blocked_by_ai}`);
   console.log(`低確信度ラベル付与: ${summary.labeled_low_confidence}`);
-  console.log(`ブラックリスト解除: ${summary.unblocked_from_blacklist}`);
   console.log(`受信トレイに残す: ${summary.kept_in_inbox}`);
   console.log(`エラー: ${summary.errors}`);
 }
