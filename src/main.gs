@@ -131,8 +131,9 @@ function processEmails() {
         const blacklistStatus = isBlacklisted(senderEmail);
 
         if (blacklistStatus.found) {
-          // ブラックリスト登録済み → 即ゴミ箱に移動（AI判定なし）
-          trashMessage(messageId);
+          // ブラックリスト登録済み → アーカイブ（AI判定なし）
+          archiveMessage(messageId);
+          addLabel(messageId, CONFIG.LABEL_BLOCKED);
 
           classification = 'spam';
           confidence = 1.0;

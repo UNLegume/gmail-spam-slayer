@@ -29,7 +29,7 @@ appsscript.json        # GAS マニフェスト
    - あり → スパム判定をスキップ・`_filtered/processed` ラベルのみ付与・受信トレイに残す
    - なし → 次のステップへ
 4. 送信元がブラックリストに存在するか確認
-   - 存在する → 即ゴミ箱に移動（AI判定なし）+ `_filtered/processed` ラベル + ログ記録
+   - 存在する → アーカイブ（AI判定なし）+ `_filtered/blocked` + `_filtered/processed` ラベル + ログ記録
    - 存在しない → AI 判定へ
 5. Gemini API でメール内容を判定
 6. 判定結果に基づくアクション:
@@ -48,7 +48,7 @@ appsscript.json        # GAS マニフェスト
 ## ブラックリスト仕様
 - スプレッドシートのシート `Blacklist` に保存
 - カラム: email, added_date, source (auto/manual)
-- ブラックリスト登録済みのメールは内容を精査せず即座にゴミ箱に移動する（AI判定なし）
+- ブラックリスト登録済みのメールは内容を精査せずアーカイブする（AI判定なし）
 - 猶予期間は現在無効（`BLACKLIST_GRACE_PERIOD_DAYS` は将来の復活に備えて config に残存）
 
 ## Gmail REST API の利用理由
