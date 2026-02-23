@@ -127,8 +127,7 @@ gmail-spam-slayer/
 │   ├── classifier.gs   # Gemini API によるメール判定（プロンプト構築・レスポンス解析）
 │   ├── blacklist.gs    # ブラックリスト管理（スプレッドシート CRUD）
 │   ├── logger.gs       # 処理ログ記録（スプレッドシート ProcessLog シート）
-│   ├── utils.gs        # ユーティリティ関数（メール正規化・日付計算等）
-│   └── test.gs         # 動作確認用テスト関数
+│   └── utils.gs        # ユーティリティ関数（メール正規化・日付計算等）
 ├── appsscript.json     # GAS マニフェスト（OAuth スコープ設定）
 └── .clasp.json         # clasp 設定（スクリプトID）
 ```
@@ -156,16 +155,17 @@ GAS エディタの「プロジェクトの設定」>「スクリプト プロ�
 | `GEMINI_API_KEY` | Google AI Studio で発行した API キー |
 | `SPREADSHEET_ID` | ブラックリスト・ログ用スプレッドシートの ID |
 
-### 3. 動作確認
+### 3. 初期化
 
-GAS エディタで以下のテスト関数を順番に実行する。
+GAS エディタで `initialize()` を実行する。以下の処理が一括で行われる。
 
 ```
-test1_Config()       # Script Properties が正しく設定されているか確認
-test2_Classifier()   # Gemini API の疎通・分類動作を確認
-test3_Gmail()        # Gmail REST API の疎通・メール取得を確認
-test4_Spreadsheet()  # スプレッドシートの読み書きを確認
+initialize()   # ラベル作成・シート作成・Script Properties の設定確認
 ```
+
+- 必要な Gmail ラベル（`_filtered/blocked`, `_filtered/low_confidence`, `_filtered/processed`）を作成する
+- スプレッドシートに `Blacklist` シートと `ProcessLog` シートを作成する
+- `GEMINI_API_KEY` と `SPREADSHEET_ID` が設定されているか確認し、未設定の場合はエラーログを出力する
 
 ### 4. トリガーの設定
 

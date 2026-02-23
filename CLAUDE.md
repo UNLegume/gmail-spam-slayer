@@ -12,7 +12,7 @@
 ## ディレクトリ構成
 ```
 src/
-├── main.gs            # エントリポイント・トリガー管理・処理フロー制御
+├── main.gs            # エントリポイント・トリガー管理・処理フロー制御・初期化
 ├── config.gs          # 定数・設定値・スプレッドシートID等
 ├── gmailClient.gs     # Gmail REST API ラッパー（取得・ラベル・アーカイブ）
 ├── classifier.gs      # Gemini API によるメール判定

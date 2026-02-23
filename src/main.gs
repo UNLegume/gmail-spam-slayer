@@ -141,6 +141,61 @@ function processEmails() {
 }
 
 /**
+ * 初期化関数。GAS エディタから手動実行する。
+ * - 必要なラベルの作成（_filtered/blocked, _filtered/low_confidence, _filtered/processed）
+ * - スプレッドシートのシート作成（Blacklist, ProcessLog）
+ * - Script Properties（GEMINI_API_KEY と SPREADSHEET_ID）の設定確認
+ * - 「初期化完了」ログの出力
+ *
+ * processEmails() からは呼び出さない
+ * （processEmails 内でラベル作成・シート取得は既に行われているため）。
+ */
+function initialize() {
+  // 必要なラベルの作成（既に存在する場合はスキップ）
+  console.log('ラベルの作成を確認中...');
+  ensureLabelExists(CONFIG.LABEL_BLOCKED);
+  console.log(`  ラベル "${CONFIG.LABEL_BLOCKED}" OK`);
+  ensureLabelExists(CONFIG.LABEL_LOW_CONFIDENCE);
+  console.log(`  ラベル "${CONFIG.LABEL_LOW_CONFIDENCE}" OK`);
+  ensureLabelExists(CONFIG.LABEL_PROCESSED);
+  console.log(`  ラベル "${CONFIG.LABEL_PROCESSED}" OK`);
+
+  // スプレッドシートのシート作成（存在しない場合は自動作成される）
+  console.log('スプレッドシートのシートを確認中...');
+  getBlacklistSheet();
+  console.log(`  シート "${CONFIG.BLACKLIST_SHEET_NAME}" OK`);
+  getLogSheet();
+  console.log(`  シート "${CONFIG.LOG_SHEET_NAME}" OK`);
+
+  // Script Properties の確認
+  console.log('Script Properties を確認中...');
+  let hasError = false;
+
+  const geminiApiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  if (!geminiApiKey) {
+    console.error('  [ERROR] GEMINI_API_KEY が設定されていません');
+    hasError = true;
+  } else {
+    console.log('  GEMINI_API_KEY OK');
+  }
+
+  const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  if (!spreadsheetId) {
+    console.error('  [ERROR] SPREADSHEET_ID が設定されていません');
+    hasError = true;
+  } else {
+    console.log('  SPREADSHEET_ID OK');
+  }
+
+  if (hasError) {
+    console.error('初期化に問題があります。GAS エディタの「プロジェクトの設定」>「スクリプト プロパティ」を確認してください。');
+    return;
+  }
+
+  console.log('初期化完了');
+}
+
+/**
  * processEmails の午前10時と午後7時の1日2回トリガーをセットアップする。
  * 既存のトリガーがあれば削除してから新規作成する。
  */
