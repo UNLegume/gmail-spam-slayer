@@ -6,9 +6,9 @@
 const CONFIG = {
   // Gemini API
   GEMINI_API_BASE: 'https://generativelanguage.googleapis.com/v1beta/models',
-  GEMINI_MODEL: 'gemini-2.5-pro',
+  GEMINI_MODEL: 'gemini-2.5-flash',
   GEMINI_TEMPERATURE: 0,
-  GEMINI_MAX_TOKENS: 2048,
+  GEMINI_MAX_TOKENS: 512,
 
   // レートリミット対策（有料プラン: 1,000 req/min）
   API_CALL_DELAY_MS: 500,
@@ -21,7 +21,7 @@ const CONFIG = {
   TARGET_EMAIL: 'service@finn.co.jp',
 
   // 判定閾値
-  SPAM_CONFIDENCE_THRESHOLD: 0.7,
+  SPAM_CONFIDENCE_THRESHOLD: 0.6,
 
   // ブラックリスト
   BLACKLIST_SHEET_NAME: 'Blacklist',

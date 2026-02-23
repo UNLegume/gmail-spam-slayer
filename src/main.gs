@@ -92,7 +92,7 @@ function processEmails() {
           // ブラックリスト未登録 → AI 判定
           // Gemini 無料枠のレートリミット対策（10 req/min）
           Utilities.sleep(CONFIG.API_CALL_DELAY_MS);
-          const result = classifyEmail(detail.subject, detail.body);
+          const result = classifyEmail(detail.subject, detail.body, detail.from);
           classification = result.classification;
           confidence = result.confidence;
           reason = result.reason;
