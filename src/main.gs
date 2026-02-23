@@ -1,7 +1,7 @@
 /**
  * メインエントリポイント・処理フロー制御
  *
- * 1時間間隔の GAS トリガーから呼び出され、以下のフローを実行:
+ * 午前10時と午後7時の1日2回の GAS トリガーから呼び出され、以下のフローを実行:
  * 1. Gmail REST API で未処理メールを取得（最大50通）
  * 2. 各メールについて:
  *    a. 送信元がブラックリストにあるか確認
@@ -133,20 +133,28 @@ function processEmails() {
 }
 
 /**
- * processEmails の1時間間隔トリガーをセットアップする。
+ * processEmails の午前10時と午後7時の1日2回トリガーをセットアップする。
  * 既存のトリガーがあれば削除してから新規作成する。
  */
 function setupTrigger() {
-  // 既存のトリガーを削除
+  // 既存の processEmails トリガーをすべて削除（重複防止）
   removeTrigger();
 
-  // 新規トリガー作成
+  // 午前10時のトリガーを作成
   ScriptApp.newTrigger('processEmails')
     .timeBased()
-    .everyHours(1)
+    .atHour(10)
+    .everyDays(1)
     .create();
 
-  console.log('processEmails トリガーをセットアップしました（every 1 hour）');
+  // 午後19時のトリガーを作成
+  ScriptApp.newTrigger('processEmails')
+    .timeBased()
+    .atHour(19)
+    .everyDays(1)
+    .create();
+
+  console.log('Triggers created: processEmails at 10:00 and 19:00 daily');
 }
 
 /**

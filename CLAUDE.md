@@ -4,7 +4,7 @@
 `service@finn.co.jp` に届く一方的な営業メールを、Google Apps Script（GAS）+ Gmail REST API + Gemini API で自動判定・フィルタリングするシステム。
 
 ## 技術スタック
-- **実行基盤**: Google Apps Script（1時間間隔トリガー）
+- **実行基盤**: Google Apps Script（1日2回（午前10時・午後7時）トリガー）
 - **メール操作**: Gmail REST API（`UrlFetchApp.fetch()` + OAuth トークン）
 - **AI 判定**: Gemini API `gemini-2.5-flash`（temperature: 0、無料枠）
 - **データ保存**: Google Spreadsheet（ブラックリスト + 処理ログ）
@@ -23,7 +23,7 @@ appsscript.json        # GAS マニフェスト
 ```
 
 ## 処理フロー
-1. GAS トリガー起動（1時間間隔、1回最大50通）
+1. GAS トリガー起動（1日2回：午前10時・午後7時、1回最大50通）
 2. Gmail REST API で未処理メールを取得
 3. 送信元がブラックリストに存在するか確認
    - 存在 & 猶予期間外 → 即アーカイブ + `_filtered/blocked` ラベル
