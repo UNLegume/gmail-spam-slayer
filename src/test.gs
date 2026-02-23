@@ -47,7 +47,6 @@ function test4_Spreadsheet() {
     from: 'test@example.com',
     subject: 'テストメール',
     classification: 'spam',
-    confidence: 0.95,
     action: 'blocked_by_ai',
     reason: 'テスト用ログ',
   });

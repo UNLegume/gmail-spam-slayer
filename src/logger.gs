@@ -4,7 +4,7 @@
  * Google Spreadsheet の「ProcessLog」シートに全処理結果を記録する。
  *
  * シート構造:
- * | A: timestamp | B: message_id | C: from | D: subject | E: classification | F: confidence | G: action | H: reason |
+ * | A: timestamp | B: message_id | C: from | D: subject | E: classification | F: action | G: reason |
  *
  * 主な責務:
  * - ログ行の追記
@@ -13,7 +13,7 @@
  */
 
 /** @type {string[]} ログシートのヘッダー行 */
-const LOG_HEADERS = ['timestamp', 'message_id', 'from', 'subject', 'classification', 'confidence', 'action', 'reason'];
+const LOG_HEADERS = ['timestamp', 'message_id', 'from', 'subject', 'classification', 'action', 'reason'];
 
 /**
  * ログシートを取得する（存在しない場合は作成）
@@ -25,6 +25,30 @@ function getLogSheet() {
   if (!sheet) {
     sheet = ss.insertSheet(CONFIG.LOG_SHEET_NAME);
     sheet.appendRow(LOG_HEADERS);
+
+    // ヘッダー行の書式設定
+    const headerRange = sheet.getRange(1, 1, 1, LOG_HEADERS.length);
+    headerRange.setBackground('#6aa84f');
+    headerRange.setFontColor('#ffffff');
+    headerRange.setFontWeight('bold');
+    headerRange.setHorizontalAlignment('center');
+
+    // 1行目を固定
+    sheet.setFrozenRows(1);
+
+    // カラム幅の設定
+    sheet.setColumnWidth(1, 170); // timestamp
+    sheet.setColumnWidth(2, 130); // message_id
+    sheet.setColumnWidth(3, 250); // from
+    sheet.setColumnWidth(4, 300); // subject
+    sheet.setColumnWidth(5, 120); // classification
+    sheet.setColumnWidth(6, 180); // action
+    sheet.setColumnWidth(7, 350); // reason
+
+    // 折り返し設定（データ行: 2行目〜1001行目）
+    sheet.getRange(2, 3, 1000, 1).setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP); // from
+    sheet.getRange(2, 4, 1000, 1).setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP); // subject
+    sheet.getRange(2, 7, 1000, 1).setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP); // reason
   }
   return sheet;
 }
@@ -35,7 +59,6 @@ function getLogSheet() {
  * @property {string} from - 送信元メールアドレス
  * @property {string} subject - メール件名
  * @property {string} classification - 判定結果 (spam/legitimate/uncertain)
- * @property {number} confidence - 確信度 (0-1)
  * @property {string} action - 実行したアクション
  * @property {string} reason - 判定理由
  */
@@ -53,7 +76,6 @@ function logProcessingResult(result) {
       result.from,
       result.subject,
       result.classification,
-      result.confidence,
       result.action,
       result.reason,
     ]);
@@ -78,7 +100,6 @@ function logBatchResults(results) {
       result.from,
       result.subject,
       result.classification,
-      result.confidence,
       result.action,
       result.reason,
     ]);

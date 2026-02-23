@@ -109,7 +109,6 @@ function processEmails() {
         from: senderEmail,
         subject: detail.subject,
         classification,
-        confidence,
         action,
         reason,
       });

@@ -32,6 +32,25 @@ function getBlacklistSheet() {
   if (!sheet) {
     sheet = ss.insertSheet(CONFIG.BLACKLIST_SHEET_NAME);
     sheet.appendRow(BLACKLIST_HEADERS);
+
+    // ヘッダー行の書式設定
+    const headerRange = sheet.getRange(1, 1, 1, BLACKLIST_HEADERS.length);
+    headerRange.setBackground('#4a86c8');
+    headerRange.setFontColor('#ffffff');
+    headerRange.setFontWeight('bold');
+    headerRange.setHorizontalAlignment('center');
+
+    // 1行目を固定
+    sheet.setFrozenRows(1);
+
+    // カラム幅の設定
+    sheet.setColumnWidth(1, 250); // email
+    sheet.setColumnWidth(2, 130); // added_date
+    sheet.setColumnWidth(3, 160); // last_confirmed_date
+    sheet.setColumnWidth(4, 100); // source
+
+    // 折り返し設定（データ行: 2行目〜1001行目）
+    sheet.getRange(2, 1, 1000, 1).setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP); // email
   }
   return sheet;
 }
