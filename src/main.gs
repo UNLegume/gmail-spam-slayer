@@ -20,6 +20,53 @@
  */
 
 /**
+ * ブラックリスト自動解除処理。
+ * 直近 CONFIG.BLACKLIST_REVIEW_DAYS 日以内に追加されたエントリを対象に、
+ * Gmail REST API でその送信元のメールを検索し、スレッド内に自社返信があれば
+ * ブラックリストから自動解除する。
+ */
+function reviewBlacklist() {
+  const entries = getRecentBlacklistEntries(CONFIG.BLACKLIST_REVIEW_DAYS);
+  if (entries.length === 0) {
+    return;
+  }
+
+  console.log(`ブラックリスト自動解除チェック: ${entries.length} 件対象`);
+
+  for (const entry of entries) {
+    try {
+      const email = entry.email;
+      const endpoint =
+        `/messages?q=${encodeURIComponent('from:' + email + ' newer_than:' + CONFIG.BLACKLIST_REVIEW_DAYS + 'd')}&maxResults=5`;
+      const data = gmailApiRequest(endpoint);
+
+      if (!data.messages || data.messages.length === 0) {
+        continue;
+      }
+
+      // ヒットしたメッセージの threadId を重複なく収集
+      const threadIds = [];
+      for (const msg of data.messages) {
+        if (msg.threadId && threadIds.indexOf(msg.threadId) === -1) {
+          threadIds.push(msg.threadId);
+        }
+      }
+
+      // いずれかのスレッドに自社返信があれば解除
+      for (const threadId of threadIds) {
+        if (hasCompanyReply(threadId)) {
+          removeFromBlacklist(email);
+          console.log(`ブラックリスト自動解除: ${email} (threadId: ${threadId} に自社返信あり)`);
+          break;
+        }
+      }
+    } catch (e) {
+      console.error(`ブラックリスト自動解除エラー (email: ${entry.email}): ${e.message}`);
+    }
+  }
+}
+
+/**
  * メイン処理関数。GAS トリガーから呼び出される。
  * 未処理メールを取得し、自社返信確認 → ブラックリスト確認 → AI判定 → アクション実行の
  * フローを各メールに対して実行する。
@@ -31,6 +78,9 @@ function processEmails() {
   // 必要なラベルの存在を事前に確認
   ensureLabelExists(CONFIG.LABEL_BLOCKED);
   ensureLabelExists(CONFIG.LABEL_PROCESSED);
+
+  // ブラックリスト自動解除（自社返信があるスレッドの送信元を解除）
+  reviewBlacklist();
 
   // 未処理メールを取得（id と threadId を含むオブジェクトの配列）
   const messages = getUnprocessedMessages();

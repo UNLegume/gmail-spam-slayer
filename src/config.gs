@@ -25,6 +25,7 @@ const CONFIG = {
 
   // ブラックリスト
   BLACKLIST_SHEET_NAME: 'Blacklist',
+  BLACKLIST_REVIEW_DAYS: 14, // ブラックリスト自動解除の検査対象期間（日数）
 
   // ログ
   LOG_SHEET_NAME: 'ProcessLog',

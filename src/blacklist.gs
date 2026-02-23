@@ -129,6 +129,41 @@ function addToBlacklist(email, source) {
 }
 
 /**
+ * 指定日数以内に追加されたブラックリストエントリを返す
+ * @param {number} days - 検査対象期間（日数）
+ * @returns {Array<{ email: string, addedDate: string, source: string }>}
+ */
+function getRecentBlacklistEntries(days) {
+  const sheet = getBlacklistSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) {
+    return [];
+  }
+
+  const data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+  const now = new Date();
+  const result = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const email = String(data[i][0]);
+    const addedDateStr = String(data[i][1]);
+    const source = String(data[i][2]);
+
+    if (!email) continue;
+
+    // "yyyy-MM-dd HH:mm:ss" 形式をパース
+    const addedDate = new Date(addedDateStr.replace(' ', 'T'));
+    if (isNaN(addedDate.getTime())) continue;
+
+    if (daysBetween(addedDate, now) <= days) {
+      result.push({ email: email, addedDate: addedDateStr, source: source });
+    }
+  }
+
+  return result;
+}
+
+/**
  * ブラックリストからメールアドレスを削除する
  * @param {string} email - 削除対象のメールアドレス
  */
