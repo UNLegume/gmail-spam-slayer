@@ -13,7 +13,7 @@
 
 ```
 GAS トリガー起動（10:00 / 19:00）
-  └── Gmail REST API で未処理メールを取得（最大50通）
+  └── Gmail REST API で未処理メールを取得
         └── メールごとに以下を順番に実行
               |
               +-- [1] 自社返信チェック
@@ -30,11 +30,11 @@ GAS トリガー起動（10:00 / 19:00）
               |           処理ログ記録（action: blocked_by_blacklist）
               |
               +-- [3] Gemini API で AI 判定（ブラックリスト未登録の場合）
-                      spam (confidence >= 0.8)
+                      spam (confidence >= 0.7)
                       --> アーカイブ + _filtered/blocked ラベル + ブラックリスト自動追加
                           _filtered/processed ラベル付与
                           処理ログ記録（action: blocked_by_ai）
-                      spam (confidence < 0.8)
+                      spam (confidence < 0.7)
                       --> _filtered/low_confidence ラベル付与（受信トレイに残す）
                           _filtered/processed ラベル付与
                           処理ログ記録（action: labeled_low_confidence）
@@ -50,8 +50,8 @@ GAS トリガー起動（10:00 / 19:00）
 |------|------|------------|-----------|
 | 自社返信あり | legitimate | — | 受信トレイに残す（スパム判定スキップ） |
 | ブラックリスト登録済み | spam | — | ゴミ箱に移動（AI判定なし） |
-| AI判定 | spam | >= 0.8 | アーカイブ + `_filtered/blocked` + ブラックリスト自動追加 |
-| AI判定 | spam | < 0.8 | `_filtered/low_confidence` ラベルのみ（受信トレイに残す） |
+| AI判定 | spam | >= 0.7 | アーカイブ + `_filtered/blocked` + ブラックリスト自動追加 |
+| AI判定 | spam | < 0.7 | `_filtered/low_confidence` ラベルのみ（受信トレイに残す） |
 | AI判定 | legitimate | — | 受信トレイに残す |
 | AI判定 | uncertain | — | 受信トレイに残す（安全側に倒す） |
 
@@ -64,10 +64,12 @@ GAS トリガー起動（10:00 / 19:00）
 一方的な売り込みメールを spam と判定する。
 
 - IT 製品・SaaS ツール・マーケティングサービス等の宣伝
-- セミナー・ウェビナー・イベント・展示会の案内
+- セミナー・ウェビナー・イベント・展示会の案内（主催・後援・協賛に関わらず）
 - 資料送付の打診・ホワイトペーパーの案内
 - 面談・商談・アポイントメントの一方的な依頼
 - コンサルティング・広告・Web 制作・DX 推進等のサービス紹介
+- AI・DX・デジタル化・業務改善に関するコンサルティングや導入提案
+- 「御社の課題を解決」「業務効率化のご提案」等の定型句を含む一般的な提案メール
 - 採用媒体・HR Tech・福利厚生サービス等の営業
 - オフィス用品・回線・電力・不動産等の営業
 - 一括送信されたと思われるテンプレート的なメール
@@ -105,7 +107,7 @@ SES・人材ビジネスに直接関係する具体的なやり取り、およ�
 | added_date | 追加日時（JST: `yyyy-MM-dd HH:mm:ss`） |
 | source | 追加元（`auto`: AI 判定による自動追加 / `manual`: 手動追加） |
 
-- AI 判定で spam かつ confidence >= 0.8 の場合に `auto` として自動登録される
+- AI 判定で spam かつ confidence >= 0.7 の場合に `auto` として自動登録される
 - 登録済みアドレスからのメールは AI 判定を行わず即座にゴミ箱に移動する
 - 誤登録した場合はスプレッドシートの該当行を手動で削除する
 
@@ -176,10 +178,9 @@ GAS エディタで `setupTrigger()` を手動実行する。`processEmails` の
 | `API_CALL_DELAY_MS` | `500` | API 呼び出し間のスリープ（ms） |
 | `API_RETRY_MAX` | `3` | API リトライ上限回数 |
 | `API_RETRY_COOLDOWN_MS` | `5000` | リトライ待機時間（ms） |
-| `MAX_EMAILS_PER_RUN` | `50` | 1回の実行で処理する最大メール数 |
 | `EMAIL_BODY_MAX_LENGTH` | `2000` | 判定に渡す本文の最大文字数 |
 | `TARGET_EMAIL` | `service@finn.co.jp` | フィルタリング対象のメールアドレス |
-| `SPAM_CONFIDENCE_THRESHOLD` | `0.8` | アーカイブ実行の confidence 閾値 |
+| `SPAM_CONFIDENCE_THRESHOLD` | `0.7` | アーカイブ実行の confidence 閾値 |
 | `BLACKLIST_SHEET_NAME` | `Blacklist` | ブラックリストシート名 |
 | `LOG_SHEET_NAME` | `ProcessLog` | ログシート名 |
 | `LABEL_BLOCKED` | `_filtered/blocked` | 高確信度スパムに付与するラベル |
