@@ -52,8 +52,8 @@ function gmailApiRequest(endpoint, options = {}) {
 }
 
 /**
- * 未処理メールのメッセージID一覧を取得する
- * @returns {string[]} メッセージIDの配列
+ * 未処理メールのメッセージ情報一覧を取得する
+ * @returns {{ id: string, threadId: string }[]} メッセージ情報の配列
  */
 function getUnprocessedMessages() {
   const query = `to:${CONFIG.TARGET_EMAIL} in:inbox -label:${CONFIG.LABEL_PROCESSED}`;
@@ -64,7 +64,8 @@ function getUnprocessedMessages() {
     if (!data.messages || data.messages.length === 0) {
       return [];
     }
-    return data.messages.map((msg) => msg.id);
+    // id と threadId の両方を返す
+    return data.messages.map((msg) => ({ id: msg.id, threadId: msg.threadId }));
   } catch (e) {
     console.error('未処理メール取得に失敗:', e.message);
     return [];
@@ -74,7 +75,7 @@ function getUnprocessedMessages() {
 /**
  * メールの詳細情報を取得する
  * @param {string} messageId - Gmail メッセージID
- * @returns {{ id: string, from: string, subject: string, body: string, date: string }}
+ * @returns {{ id: string, threadId: string, from: string, subject: string, body: string, date: string }}
  */
 function getMessageDetail(messageId) {
   const data = gmailApiRequest(`/messages/${messageId}?format=full`);
@@ -93,11 +94,52 @@ function getMessageDetail(messageId) {
 
   return {
     id: messageId,
+    threadId: data.threadId || '',
     from: from,
     subject: subject,
     body: truncateText(body, CONFIG.EMAIL_BODY_MAX_LENGTH),
     date: date,
   };
+}
+
+/**
+ * スレッド内に自社ドメインからの返信があるか確認する
+ * CONFIG.COMPANY_DOMAINS に含まれるドメインからのメッセージが1件以上あれば true を返す。
+ * @param {string} threadId - Gmail スレッドID
+ * @returns {boolean} 自社からの返信があれば true
+ */
+function hasCompanyReply(threadId) {
+  try {
+    const data = gmailApiRequest(
+      `/threads/${threadId}?format=metadata&metadataHeaders=From`
+    );
+    const messages = data.messages || [];
+
+    for (const message of messages) {
+      const headers = (message.payload && message.payload.headers) || [];
+      const fromHeader = headers.find(
+        (h) => h.name.toLowerCase() === 'from'
+      );
+      if (!fromHeader) continue;
+
+      const fromValue = fromHeader.value || '';
+      // "Name <address@domain>" または "address@domain" 形式に対応
+      const match = fromValue.match(/<([^>]+)>/) || fromValue.match(/(\S+@\S+)/);
+      const emailAddress = match ? match[1].toLowerCase() : fromValue.toLowerCase();
+
+      for (const domain of CONFIG.COMPANY_DOMAINS) {
+        if (emailAddress.endsWith('@' + domain)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  } catch (e) {
+    console.error(`スレッド取得に失敗 (threadId: ${threadId}):`, e.message);
+    // エラー時はスキップせず通常の判定フローへ進める
+    return false;
+  }
 }
 
 /**

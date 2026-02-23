@@ -4,11 +4,13 @@
  * 午前10時と午後7時の1日2回の GAS トリガーから呼び出され、以下のフローを実行:
  * 1. Gmail REST API で未処理メールを取得（最大50通）
  * 2. 各メールについて:
- *    a. 送信元がブラックリストにあるか確認
- *    b. ブラックリスト登録済み → 即ゴミ箱に移動（AI判定なし）
- *    c. ブラックリスト未登録 → Gemini API で判定
- *    d. 判定結果に基づくアクション実行
- *    e. 処理ログ記録
+ *    a. スレッド内に自社ドメイン（finn.co.jp / ex.finn.co.jp）からの返信があるか確認
+ *       → あればスパム判定をスキップし、_filtered/processed ラベルのみ付与
+ *    b. 送信元がブラックリストにあるか確認
+ *    c. ブラックリスト登録済み → 即ゴミ箱に移動（AI判定なし）
+ *    d. ブラックリスト未登録 → Gemini API で判定
+ *    e. 判定結果に基づくアクション実行
+ *    f. 処理ログ記録
  * 3. 処理済みラベルを付与
  *
  * 主な責務:
@@ -19,7 +21,7 @@
 
 /**
  * メイン処理関数。GAS トリガーから呼び出される。
- * 未処理メールを取得し、ブラックリスト確認 → AI判定 → アクション実行の
+ * 未処理メールを取得し、自社返信確認 → ブラックリスト確認 → AI判定 → アクション実行の
  * フローを各メールに対して実行する。
  */
 function processEmails() {
@@ -28,18 +30,19 @@ function processEmails() {
   ensureLabelExists(CONFIG.LABEL_LOW_CONFIDENCE);
   ensureLabelExists(CONFIG.LABEL_PROCESSED);
 
-  // 未処理メールを取得
-  const messageIds = getUnprocessedMessages();
-  if (!messageIds || messageIds.length === 0) {
+  // 未処理メールを取得（id と threadId を含むオブジェクトの配列）
+  const messages = getUnprocessedMessages();
+  if (!messages || messages.length === 0) {
     console.log('未処理メールはありません');
     return;
   }
 
-  console.log(`${messageIds.length} 件の未処理メールを処理開始`);
+  console.log(`${messages.length} 件の未処理メールを処理開始`);
 
   // 処理結果のカウンター
   const summary = {
-    total: messageIds.length,
+    total: messages.length,
+    skipped_company_reply: 0,
     blocked_by_blacklist: 0,
     blocked_by_ai: 0,
     labeled_low_confidence: 0,
@@ -47,50 +50,61 @@ function processEmails() {
     errors: 0,
   };
 
-  for (const messageId of messageIds) {
+  for (const message of messages) {
+    const messageId = message.id;
     try {
       // メール詳細を取得
       const detail = getMessageDetail(messageId);
       const senderEmail = normalizeEmail(detail.from);
 
-      // ブラックリスト確認
-      const blacklistStatus = isBlacklisted(senderEmail);
+      // スレッドIDを取得（getMessageDetail の戻り値を優先し、なければ getUnprocessedMessages の値を使用）
+      const threadId = detail.threadId || message.threadId;
 
       let classification;
       let confidence;
       let action;
       let reason;
 
-      if (blacklistStatus.found) {
-        // ブラックリスト登録済み → 即ゴミ箱に移動（AI判定なし）
-        trashMessage(messageId);
-
-        classification = 'spam';
-        confidence = 1.0;
-        action = 'blocked_by_blacklist';
-        reason = 'ブラックリスト登録済み';
+      // 自社からの返信があるスレッドはスパム判定をスキップ
+      if (threadId && hasCompanyReply(threadId)) {
+        classification = 'legitimate';
+        action = 'skipped_company_reply';
+        reason = '自社ドメインからの返信あり';
       } else {
-        // ブラックリスト未登録 → AI 判定
-        // Gemini 無料枠のレートリミット対策（10 req/min）
-        Utilities.sleep(CONFIG.API_CALL_DELAY_MS);
-        const result = classifyEmail(detail.subject, detail.body);
-        classification = result.classification;
-        confidence = result.confidence;
-        reason = result.reason;
+        // ブラックリスト確認
+        const blacklistStatus = isBlacklisted(senderEmail);
 
-        if (classification === 'spam' && confidence >= CONFIG.SPAM_CONFIDENCE_THRESHOLD) {
-          // 高確信度スパム → アーカイブ + ブラックリスト追加
-          archiveMessage(messageId);
-          addLabel(messageId, CONFIG.LABEL_BLOCKED);
-          addToBlacklist(senderEmail, 'auto');
-          action = 'blocked_by_ai';
-        } else if (classification === 'spam' && confidence < CONFIG.SPAM_CONFIDENCE_THRESHOLD) {
-          // 低確信度スパム → ラベルのみ
-          addLabel(messageId, CONFIG.LABEL_LOW_CONFIDENCE);
-          action = 'labeled_low_confidence';
+        if (blacklistStatus.found) {
+          // ブラックリスト登録済み → 即ゴミ箱に移動（AI判定なし）
+          trashMessage(messageId);
+
+          classification = 'spam';
+          confidence = 1.0;
+          action = 'blocked_by_blacklist';
+          reason = 'ブラックリスト登録済み';
         } else {
-          // legitimate / uncertain → 受信トレイに残す
-          action = 'kept_in_inbox';
+          // ブラックリスト未登録 → AI 判定
+          // Gemini 無料枠のレートリミット対策（10 req/min）
+          Utilities.sleep(CONFIG.API_CALL_DELAY_MS);
+          const result = classifyEmail(detail.subject, detail.body);
+          classification = result.classification;
+          confidence = result.confidence;
+          reason = result.reason;
+
+          if (classification === 'spam' && confidence >= CONFIG.SPAM_CONFIDENCE_THRESHOLD) {
+            // 高確信度スパム → アーカイブ + ブラックリスト追加
+            archiveMessage(messageId);
+            addLabel(messageId, CONFIG.LABEL_BLOCKED);
+            addToBlacklist(senderEmail, 'auto');
+            action = 'blocked_by_ai';
+          } else if (classification === 'spam' && confidence < CONFIG.SPAM_CONFIDENCE_THRESHOLD) {
+            // 低確信度スパム → ラベルのみ
+            addLabel(messageId, CONFIG.LABEL_LOW_CONFIDENCE);
+            action = 'labeled_low_confidence';
+          } else {
+            // legitimate / uncertain → 受信トレイに残す
+            action = 'kept_in_inbox';
+          }
         }
       }
 
@@ -118,6 +132,7 @@ function processEmails() {
   // 処理結果サマリーを出力
   console.log('--- 処理結果サマリー ---');
   console.log(`処理件数: ${summary.total}`);
+  console.log(`自社返信済みスキップ: ${summary.skipped_company_reply}`);
   console.log(`ブラックリストによりブロック: ${summary.blocked_by_blacklist}`);
   console.log(`AI判定によりブロック: ${summary.blocked_by_ai}`);
   console.log(`低確信度ラベル付与: ${summary.labeled_low_confidence}`);

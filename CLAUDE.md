@@ -25,15 +25,18 @@ appsscript.json        # GAS マニフェスト
 ## 処理フロー
 1. GAS トリガー起動（1日2回：午前10時・午後7時、1回最大50通）
 2. Gmail REST API で未処理メールを取得
-3. 送信元がブラックリストに存在するか確認
+3. スレッド内に自社ドメイン（`@finn.co.jp` / `@ex.finn.co.jp`）からの返信があるか確認
+   - あり → スパム判定をスキップ・`_filtered/processed` ラベルのみ付与・受信トレイに残す
+   - なし → 次のステップへ
+4. 送信元がブラックリストに存在するか確認
    - 存在する → 即ゴミ箱に移動（AI判定なし）+ `_filtered/processed` ラベル + ログ記録
    - 存在しない → AI 判定へ
-4. Gemini API でメール内容を判定
-5. 判定結果に基づくアクション:
+5. Gemini API でメール内容を判定
+6. 判定結果に基づくアクション:
    - spam (confidence ≥ 0.8) → アーカイブ + `_filtered/blocked` ラベル + ブラックリスト自動追加
    - spam (confidence < 0.8) → 受信トレイに残す + `_filtered/low_confidence` ラベル
    - legitimate / uncertain → 受信トレイに残す
-6. 処理ログをスプレッドシートに記録
+7. 処理ログをスプレッドシートに記録
 
 ## 判定ルール
 | 判定 | confidence | アクション |

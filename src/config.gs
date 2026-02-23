@@ -24,7 +24,6 @@ const CONFIG = {
   SPAM_CONFIDENCE_THRESHOLD: 0.8,
 
   // ブラックリスト
-  BLACKLIST_GRACE_PERIOD_DAYS: 30,
   BLACKLIST_SHEET_NAME: 'Blacklist',
 
   // ログ
@@ -37,6 +36,9 @@ const CONFIG = {
 
   // Gmail REST API
   GMAIL_API_BASE: 'https://www.googleapis.com/gmail/v1/users/me',
+
+  // 自社ドメイン（これらからの返信があるスレッドはスパム判定をスキップ）
+  COMPANY_DOMAINS: ['finn.co.jp', 'ex.finn.co.jp'],
 };
 
 /**
