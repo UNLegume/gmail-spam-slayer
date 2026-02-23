@@ -8,7 +8,7 @@ const CONFIG = {
   GEMINI_API_BASE: 'https://generativelanguage.googleapis.com/v1beta/models',
   GEMINI_MODEL: 'gemini-2.5-flash',
   GEMINI_TEMPERATURE: 0,
-  GEMINI_MAX_TOKENS: 1024,
+  GEMINI_MAX_TOKENS: 2048,
 
   // レートリミット対策（有料プラン: 1,000 req/min）
   API_CALL_DELAY_MS: 500,
