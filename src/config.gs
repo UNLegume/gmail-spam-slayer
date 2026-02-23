@@ -21,7 +21,7 @@ const CONFIG = {
   TARGET_EMAIL: 'service@finn.co.jp',
 
   // 判定閾値
-  SPAM_CONFIDENCE_THRESHOLD: 0.8,
+  SPAM_CONFIDENCE_THRESHOLD: 0.7,
 
   // ブラックリスト
   BLACKLIST_SHEET_NAME: 'Blacklist',
