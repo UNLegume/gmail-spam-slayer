@@ -6,7 +6,7 @@
 const CONFIG = {
   // Gemini API
   GEMINI_API_BASE: 'https://generativelanguage.googleapis.com/v1beta/models',
-  GEMINI_MODEL: 'gemini-2.5-flash',
+  GEMINI_MODEL: 'gemini-2.5-pro',
   GEMINI_TEMPERATURE: 0,
   GEMINI_MAX_TOKENS: 2048,
 
