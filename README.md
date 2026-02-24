@@ -105,7 +105,7 @@ Gemini API には二値分類（`is_legitimate: true / false`）で回答させ�
 ```
 gmail-spam-slayer/
 ├── src/
-│   ├── main.gs         # エントリポイント・処理フロー制御・トリガー管理・初期化
+│   ├── main.gs         # エントリポイント・処理フロー制御・初期化
 │   ├── config.gs       # 定数・設定値（機密情報は Script Properties から取得）
 │   ├── gmailClient.gs  # Gmail REST API ラッパー（取得・ラベル・アーカイブ）
 │   ├── classifier.gs   # Gemini API によるメール判定（プロンプト構築・レスポンス解析）
@@ -162,12 +162,12 @@ GAS エディタで `initialize()` を手動実行する。以下の処理が一
 
 ### 4. トリガーの設定
 
-GAS エディタで `setupTrigger()` を手動実行する。`processEmails` の1日2回（午前10時・午後7時）トリガーが登録される。
+GAS エディタの左メニュー「トリガー」（時計アイコン）から手動で設定する。
 
-| 関数 | 説明 |
-|------|------|
-| `setupTrigger()` | トリガーを登録（既存トリガーは削除してから再作成） |
-| `removeTrigger()` | `processEmails` のトリガーをすべて削除 |
+| 関数 | タイプ | 時刻 |
+|------|--------|------|
+| `processEmails` | 時間ベース / 日タイマー | 午前10時〜11時 |
+| `processEmails` | 時間ベース / 日タイマー | 午後7時〜8時 |
 
 ## 設定値一覧
 

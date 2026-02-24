@@ -260,39 +260,8 @@ function initialize() {
 }
 
 /**
- * processEmails の午前10時と午後7時の1日2回トリガーをセットアップする。
- * 既存のトリガーがあれば削除してから新規作成する。
+ * トリガーのセットアップは GAS エディタの UI から行う。
+ * 「トリガー」画面で以下を手動設定:
+ *   - 関数: processEmails / 時間ベース / 毎日 / 午前10時
+ *   - 関数: processEmails / 時間ベース / 毎日 / 午後7時
  */
-function setupTrigger() {
-  // 既存の processEmails トリガーをすべて削除（重複防止）
-  removeTrigger();
-
-  // 午前10時のトリガーを作成
-  ScriptApp.newTrigger('processEmails')
-    .timeBased()
-    .atHour(10)
-    .everyDays(1)
-    .create();
-
-  // 午後19時のトリガーを作成
-  ScriptApp.newTrigger('processEmails')
-    .timeBased()
-    .atHour(19)
-    .everyDays(1)
-    .create();
-
-  console.log('Triggers created: processEmails at 10:00 and 19:00 daily');
-}
-
-/**
- * processEmails のトリガーを全削除する。
- */
-function removeTrigger() {
-  const triggers = ScriptApp.getProjectTriggers();
-  for (const trigger of triggers) {
-    if (trigger.getHandlerFunction() === 'processEmails') {
-      ScriptApp.deleteTrigger(trigger);
-    }
-  }
-  console.log('processEmails トリガーを削除しました');
-}
