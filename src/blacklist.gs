@@ -4,7 +4,7 @@
  * Google Spreadsheet の「Blacklist」シートを使ったブラックリスト管理。
  *
  * シート構造:
- * | A: email | B: added_date | C: source (auto/manual) |
+ * | A: email | B: added_date | C: source (auto/manual) | D: notified |
  *
  * 主な責務:
  * - ブラックリストの検索（メールアドレスが登録済みか確認）
@@ -15,7 +15,7 @@
  */
 
 /** @type {string[]} ブラックリストシートのヘッダー行 */
-const BLACKLIST_HEADERS = ['email', 'added_date', 'source'];
+const BLACKLIST_HEADERS = ['email', 'added_date', 'source', 'notified'];
 
 /**
  * ブラックリストシートを取得する（存在しない場合は作成）

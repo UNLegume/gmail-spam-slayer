@@ -39,6 +39,10 @@ const CONFIG = {
 
   // 自社ドメイン（これらからの返信があるスレッドはスパム判定をスキップ）
   COMPANY_DOMAINS: ['finn.co.jp', 'ex.finn.co.jp'],
+
+  // Slack 通知
+  SLACK_API_BASE: 'https://slack.com/api',
+  SLACK_NOTIFY_ENABLED: true,
 };
 
 /**

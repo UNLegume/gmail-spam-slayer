@@ -86,6 +86,7 @@ function processEmails() {
   const messages = getUnprocessedMessages();
   if (!messages || messages.length === 0) {
     console.log('未処理メールはありません');
+    notifyNewBlacklistEntries();
     return;
   }
 
@@ -190,6 +191,8 @@ function processEmails() {
   console.log(`AI判定によりブロック: ${summary.blocked_by_ai}`);
   console.log(`受信トレイに残す: ${summary.kept_in_inbox}`);
   console.log(`エラー: ${summary.errors}`);
+
+  notifyNewBlacklistEntries();
 }
 
 /**
@@ -235,6 +238,17 @@ function initialize() {
     hasError = true;
   } else {
     console.log('  SPREADSHEET_ID OK');
+  }
+
+  if (CONFIG.SLACK_NOTIFY_ENABLED) {
+    const slackBotToken = PropertiesService.getScriptProperties().getProperty('SLACK_BOT_TOKEN');
+    const slackChannelId = PropertiesService.getScriptProperties().getProperty('SLACK_CHANNEL_ID');
+    if (!slackBotToken || !slackChannelId) {
+      console.warn('  [WARN] SLACK_BOT_TOKEN または SLACK_CHANNEL_ID が設定されていません（Slack通知は無効になります）');
+    } else {
+      console.log('  SLACK_BOT_TOKEN OK');
+      console.log('  SLACK_CHANNEL_ID OK');
+    }
   }
 
   if (hasError) {

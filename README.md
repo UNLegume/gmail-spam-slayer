@@ -8,6 +8,7 @@
 - **メール操作**: Gmail REST API（`UrlFetchApp.fetch()` + OAuth トークン）
 - **AI 判定**: Gemini API `gemini-2.5-flash`（temperature: 0）
 - **データ保存**: Google Spreadsheet（ブラックリスト + 処理ログ）
+- **通知**: Slack API（ブラックリスト新規追加時に通知 + メールアドレスリスト添付）
 
 ## 処理フロー
 
@@ -43,6 +44,10 @@ GAS トリガー起動（10:00 / 19:00）
                       --> 受信トレイに残す
                           _filtered/processed ラベル付与
                           処理ログ記録（action: kept_in_inbox）
+  |
+  └── メール処理ループ完了後に notifyNewBlacklistEntries() を実行
+        未通知のブラックリストエントリを取得し Slack に通知
+        通知成功後に notified フラグを TRUE に更新
 ```
 
 ## 判定ルール
@@ -87,8 +92,10 @@ Gemini API には二値分類（`is_legitimate: true / false`）で回答させ�
 | email | メールアドレス（正規化済み・小文字） |
 | added_date | 追加日時（JST: `yyyy-MM-dd HH:mm:ss`） |
 | source | 追加元（`auto`: AI 判定による自動追加 / `manual`: 手動追加） |
+| notified | 通知済みフラグ（`TRUE`: Slack通知済み / 空: 未通知） |
 
 - AI 判定で spam かつ confidence >= 0.6 の場合に `auto` として自動登録される
+- 新規追加エントリは Slack に自動通知される。通知成功後に `notified` カラムが `TRUE` に更新される。通知失敗時は次回実行時に自動リトライされる
 - 登録済みアドレスからのメールは AI 判定を行わずアーカイブする
 - 直近 `BLACKLIST_REVIEW_DAYS`（デフォルト 14 日）以内に追加されたエントリは自動解除の対象となる。自社返信があるスレッドの送信元が登録されていた場合、メール処理ループの前に実行される `reviewBlacklist()` によって自動的に解除される
 - 誤登録した場合はスプレッドシートの該当行を手動で削除することもできる
@@ -104,6 +111,7 @@ gmail-spam-slayer/
 │   ├── classifier.gs   # Gemini API によるメール判定（プロンプト構築・レスポンス解析）
 │   ├── blacklist.gs    # ブラックリスト管理（スプレッドシート CRUD）
 │   ├── logger.gs       # 処理ログ記録（スプレッドシート ProcessLog シート）
+│   ├── slackNotifier.gs # Slack通知（ブラックリスト新規追加時の通知・ファイルアップロード）
 │   └── utils.gs        # ユーティリティ関数（メール正規化・HTML 除去・Base64 デコード等）
 ├── appsscript.json     # GAS マニフェスト（OAuth スコープ設定）
 └── .clasp.json         # clasp 設定（スクリプト ID）
@@ -129,6 +137,20 @@ GAS エディタの「プロジェクトの設定」>「スクリプト プロ�
 |------|----|
 | `GEMINI_API_KEY` | Google AI Studio で発行した API キー |
 | `SPREADSHEET_ID` | ブラックリスト・ログ用スプレッドシートの ID |
+| `SLACK_BOT_TOKEN` | Slack Bot Token（`xoxb-...`） |
+| `SLACK_CHANNEL_ID` | 通知先 Slack チャンネル ID |
+
+### Slack App の設定（任意）
+
+ブラックリスト新規追加時に Slack 通知を受け取る場合は以下を設定する。
+
+1. https://api.slack.com/apps → "Create New App" → "From scratch"
+2. "OAuth & Permissions" → Bot Token Scopes に `chat:write`, `files:write` を追加
+3. "Install to Workspace" → Bot User OAuth Token (`xoxb-...`) をコピー
+4. 通知先チャンネルで `/invite @<App名>` を実行
+5. Script Properties に `SLACK_BOT_TOKEN` と `SLACK_CHANNEL_ID` を登録
+
+通知が不要な場合は `CONFIG.SLACK_NOTIFY_ENABLED` を `false` に設定する。
 
 ### 3. 初期化
 
@@ -170,8 +192,10 @@ GAS エディタで `setupTrigger()` を手動実行する。`processEmails` の
 | `LABEL_PROCESSED` | `_filtered/processed` | 処理済みマーカーラベル |
 | `GMAIL_API_BASE` | `https://www.googleapis.com/gmail/v1/users/me` | Gmail REST API のベース URL |
 | `COMPANY_DOMAINS` | `['finn.co.jp', 'ex.finn.co.jp']` | 自社ドメイン（返信があるスレッドはスパム判定をスキップ） |
+| `SLACK_API_BASE` | `https://slack.com/api` | Slack API のベース URL |
+| `SLACK_NOTIFY_ENABLED` | `true` | Slack 通知の有効/無効 |
 
-機密情報（`GEMINI_API_KEY` / `SPREADSHEET_ID`）は `CONFIG` に直接書かず、Script Properties から取得する。
+機密情報（`GEMINI_API_KEY` / `SPREADSHEET_ID` / `SLACK_BOT_TOKEN` / `SLACK_CHANNEL_ID`）は `CONFIG` に直接書かず、Script Properties から取得する。
 
 ## Gmail REST API を使う理由
 
